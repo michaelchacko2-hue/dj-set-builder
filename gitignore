@@ -1,0 +1,27 @@
+# Cache files
+_analysis_cache.json
+_duplicates_report.txt
+
+# Audio files (never commit actual music)
+*.mp3
+*.wav
+*.flac
+*.aiff
+*.aif
+*.m4a
+*.ogg
+
+# Python
+__pycache__/
+*.pyc
+.env
+venv/
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
