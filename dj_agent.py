@@ -373,6 +373,17 @@ Key principles:
 - If the library doesn't have what's needed, say so honestly
 - When suggesting transitions, mention the Camelot code and why it works
 
+Mixing rules — follow these strictly:
+- ONLY recommend transitions with Camelot-compatible keys (same code, ±1, or A/B switch). 
+  Never suggest a key clash and then try to explain how to "mask" it.
+- Keep BPM transitions within ±6 BPM of each other. Larger jumps need a clear reason.
+- Half-time/double-time means tracks tagged at different BPMs that rhythmically align 
+  (e.g., 85 BPM hip hop with 170 BPM drum & bass). It does NOT mean slowing a track to 
+  half its tempo on the decks — never suggest that.
+- Don't suggest unrealistic DJ techniques like dramatically changing a track's playback speed.
+  Pitch adjustments should stay within ±3-4% (about ±3-4 BPM on a 120 BPM track).
+- If a transition scores below 70, flag it as risky rather than inventing ways to make it work.
+
 When building setlists, think about the energy arc — most good sets build gradually, 
 have peaks, and maybe a cool-down. Don't just dump tracks randomly."""
 
