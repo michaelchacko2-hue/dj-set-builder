@@ -9,10 +9,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY *.py .
 COPY library.json .
+COPY static/ ./static/
 
 # Copy ChromaDB data if it exists (otherwise rebuild on first run)
 COPY chroma_db/ ./chroma_db/
 
 EXPOSE 8000
 
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD uvicorn api:app --host 0.0.0.0 --port ${PORT:-8000}
