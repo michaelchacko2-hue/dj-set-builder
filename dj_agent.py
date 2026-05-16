@@ -269,11 +269,14 @@ def run_build_setlist(description, num_tracks=8, starting_bpm=None):
 
     while len(setlist) < num_tracks and candidates:
         current = setlist[-1]
-        best_score = -1
+        best_score = -999
         best_idx = 0
 
+        # Track last 3 artists for diversity
+        recent_artists = [t.get('artist', '') for t in setlist[-3:]]
+
         for i, candidate in enumerate(candidates):
-            result = score_transition(current, candidate)
+            result = score_transition(current, candidate, recent_artists=recent_artists)
             if result['score'] > best_score:
                 best_score = result['score']
                 best_idx = i

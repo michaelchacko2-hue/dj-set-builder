@@ -180,7 +180,32 @@ def get_compatible_codes(camelot_code):
     return compatible
 
 
-def score_transition(track_a, track_b):
+def get_base_title(title):
+    """
+    Strip remix/edit/version suffixes to get the base song title.
+    'Feel My Needs (PDM Remix)' → 'feel my needs'
+    'Wipe Me Down (Intro Dirty)' → 'wipe me down'
+    """
+    if not title:
+        return ''
+    import re
+    # Remove parenthetical suffixes (remix, edit, mix, version, etc.)
+    base = re.sub(r'\s*[\(\[].*?[\)\]]', '', title)
+    # Remove common suffixes not in parens
+    base = re.sub(r'\s*[-–]\s*(remix|edit|mix|version|dub|instrumental|radio|extended|original|clean|dirty|intro|outro|bootleg|rework|vip).*$', '', base, flags=re.IGNORECASE)
+    return base.strip().lower()
+
+
+def is_same_song(track_a, track_b):
+    """Check if two tracks are versions of the same song."""
+    title_a = get_base_title(track_a.get('title') or track_a.get('filename', ''))
+    title_b = get_base_title(track_b.get('title') or track_b.get('filename', ''))
+    if not title_a or not title_b:
+        return False
+    return title_a == title_b
+
+
+def score_transition(track_a, track_b, recent_artists=None):
     """
     Score the transition quality between two tracks (0-100).
 
@@ -188,9 +213,34 @@ def score_transition(track_a, track_b):
     - Key compatibility (Camelot match): 0-40 points
     - BPM closeness: 0-30 points
     - Energy flow (smooth or building): 0-30 points
+    - Same artist penalty: -20 points
+    - Same song/remix penalty: -40 points
+    
+    Args:
+        recent_artists: List of recently played artist names to penalize repeats
     """
     score = 0
     details = []
+
+    # ── Same song / remix check ──
+    if is_same_song(track_a, track_b):
+        score -= 40
+        details.append("Same song/remix — skip")
+
+    # ── Artist repetition penalty ──
+    artist_a = (track_a.get('artist') or '').lower().strip()
+    artist_b = (track_b.get('artist') or '').lower().strip()
+    
+    if artist_a and artist_b and artist_a == artist_b:
+        score -= 20
+        details.append("Same artist — back-to-back")
+    
+    # Also check against recent artist history (for setlist building)
+    if recent_artists and artist_b:
+        recent_lower = [a.lower().strip() for a in recent_artists]
+        if artist_b in recent_lower:
+            score -= 10
+            details.append("Artist played recently")
 
     # ── Key compatibility (40 points) ──
     key_a = key_to_camelot(track_a.get('key'))
