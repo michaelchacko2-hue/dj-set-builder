@@ -1,0 +1,15 @@
+version: "3.8"
+
+services:
+  dj-agent:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      # Persist ChromaDB data between restarts
+      - ./chroma_db:/app/chroma_db
+      # Mount library.json so updates don't require rebuild
+      - ./library.json:/app/library.json
+    restart: unless-stopped

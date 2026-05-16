@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DJ Set Builder</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-primary: #0a0a0f;
+    --bg-secondary: #12121a;
+    --bg-card: #181824;
+    --bg-input: #1e1e2e;
+    --border: #2a2a3d;
+    --text-primary: #e8e6f0;
+    --text-secondary: #8886a0;
+    --text-dim: #55546a;
+    --accent: #00e5a0;
+    --accent-glow: rgba(0, 229, 160, 0.15);
+    --accent-alt: #7c5cfc;
+    --grade-a: #00e5a0;
+    --grade-b: #f0c830;
+    --grade-c: #ff8a44;
+    --grade-d: #ff4466;
+    --transition: all 0.2s ease;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Outfit', sans-serif;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── AUTH GATE ── */
+  .auth-gate {
+    position: fixed;
+    inset: 0;
+    background: var(--bg-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    transition: opacity 0.4s ease;
+  }
+  .auth-gate.hidden { opacity: 0; pointer-events: none; }
+  .auth-box {
+    text-align: center;
+    max-width: 360px;
+    padding: 40px;
+  }
+  .auth-box h1 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+  }
+  .auth-box p {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 32px;
+  }
+  .auth-input {
+    width: 100%;
+    padding: 14px 18px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95rem;
+    outline: none;
+    transition: var(--transition);
+    margin-bottom: 16px;
+  }
+  .auth-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+  .auth-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    color: var(--bg-primary);
+    border: none;
+    border-radius: 10px;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+  .auth-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .auth-error {
+    color: var(--grade-d);
+    font-size: 0.85rem;
+    margin-top: 12px;
+    min-height: 20px;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  .app { display: flex; height: 100vh; }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 260px;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 24px 16px;
+    flex-shrink: 0;
+  }
+  .logo {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--accent);
+    margin-bottom: 6px;
+    letter-spacing: -0.5px;
+  }
+  .logo-sub {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-bottom: 32px;
+  }
+
+  .quick-actions { flex: 1; }
+  .quick-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+  .quick-btn {
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.85rem;
+    text-align: left;
+    cursor: pointer;
+    transition: var(--transition);
+    margin-bottom: 8px;
+  }
+  .quick-btn:hover {
+    border-color: var(--accent);
+    color: var(--text-primary);
+    background: var(--accent-glow);
+  }
+
+  .stats-panel {
+    padding: 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-top: auto;
+  }
+  .stats-panel .stat-label {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .stats-panel .stat-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent);
+  }
+  .stats-panel .stat-detail {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 4px;
+  }
+
+  /* ── CHAT AREA ── */
+  .chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .chat-header {
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--accent);
+  }
+
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px;
+    scroll-behavior: smooth;
+  }
+  .messages::-webkit-scrollbar { width: 6px; }
+  .messages::-webkit-scrollbar-track { background: transparent; }
+  .messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .msg {
+    margin-bottom: 24px;
+    max-width: 85%;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  .msg.user { margin-left: auto; }
+  .msg.assistant { margin-right: auto; }
+
+  .msg-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 6px;
+  }
+  .msg.user .msg-label { color: var(--accent-alt); text-align: right; }
+  .msg.assistant .msg-label { color: var(--accent); }
+
+  .msg-content {
+    padding: 16px 20px;
+    border-radius: 12px;
+    font-size: 0.92rem;
+    line-height: 1.65;
+  }
+  .msg.user .msg-content {
+    background: var(--accent-alt);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+  .msg.assistant .msg-content {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-bottom-left-radius: 4px;
+    color: var(--text-primary);
+  }
+  .msg-content pre {
+    background: var(--bg-primary);
+    padding: 12px 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 12px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    border: 1px solid var(--border);
+  }
+
+  /* ── SETLIST RENDERING ── */
+  .setlist-track {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--bg-primary);
+    border-radius: 8px;
+    margin: 6px 0;
+    border: 1px solid var(--border);
+  }
+  .setlist-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    min-width: 24px;
+  }
+  .setlist-info { flex: 1; min-width: 0; }
+  .setlist-title {
+    font-weight: 600;
+    font-size: 0.88rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .setlist-meta {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 2px;
+  }
+  .setlist-transition {
+    text-align: center;
+    padding: 2px 0;
+    font-size: 0.75rem;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .grade-A { color: var(--grade-a); }
+  .grade-B { color: var(--grade-b); }
+  .grade-C { color: var(--grade-c); }
+  .grade-D { color: var(--grade-d); }
+
+  /* ── TOOL CALLS ── */
+  .tool-call {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: rgba(0, 229, 160, 0.08);
+    border: 1px solid rgba(0, 229, 160, 0.2);
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+
+  /* ── INPUT ── */
+  .input-area {
+    padding: 20px 28px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-secondary);
+  }
+  .input-wrapper {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .chat-input {
+    flex: 1;
+    padding: 14px 18px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.95rem;
+    outline: none;
+    transition: var(--transition);
+  }
+  .chat-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+  .chat-input::placeholder { color: var(--text-dim); }
+  .chat-input:disabled { opacity: 0.5; }
+
+  .send-btn {
+    padding: 14px 24px;
+    background: var(--accent);
+    color: var(--bg-primary);
+    border: none;
+    border-radius: 10px;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+  }
+  .send-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  /* ── LOADING ── */
+  .loading-dots::after {
+    content: '';
+    animation: dots 1.4s infinite;
+  }
+  @keyframes dots {
+    0%, 20% { content: '.'; }
+    40% { content: '..'; }
+    60%, 100% { content: '...'; }
+  }
+
+  /* ── WELCOME ── */
+  .welcome {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    text-align: center;
+    padding: 40px;
+  }
+  .welcome h2 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+  .welcome p {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    max-width: 480px;
+    line-height: 1.6;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- AUTH GATE -->
+<div class="auth-gate" id="authGate">
+  <div class="auth-box">
+    <h1>DJ SET BUILDER</h1>
+    <p>AI-powered setlist assistant</p>
+    <input type="password" class="auth-input" id="apiKeyInput" placeholder="Enter password" autofocus>
+    <button class="auth-btn" onclick="authenticate()">Enter</button>
+    <div class="auth-error" id="authError"></div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="app" id="mainApp" style="display:none;">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="logo">DJ SET BUILDER</div>
+    <div class="logo-sub">Powered by Claude + ChromaDB</div>
+
+    <div class="quick-actions">
+      <div class="quick-label">Quick Actions</div>
+      <button class="quick-btn" onclick="sendMessage('Show me my library stats')">📊 Library Stats</button>
+      <button class="quick-btn" onclick="sendMessage('Build me an 8-track deep house set starting at 122 BPM')">🎧 Deep House Set</button>
+      <button class="quick-btn" onclick="sendMessage('Build me a funky disco set starting at 118 BPM')">🕺 Disco Funk Set</button>
+      <button class="quick-btn" onclick="sendMessage('Find me dark minimal tracks around 126 BPM')">🌙 Dark Minimal</button>
+      <button class="quick-btn" onclick="sendMessage('Find me high energy bangers around 128 BPM')">🔥 Peak Time</button>
+      <button class="quick-btn" onclick="sendMessage('What are my brightest, most uplifting tracks?')">☀️ Bright & Uplifting</button>
+    </div>
+
+    <div class="stats-panel" id="statsPanel">
+      <div class="stat-label">Library</div>
+      <div class="stat-value" id="statTracks">—</div>
+      <div class="stat-detail" id="statBpm">Loading...</div>
+    </div>
+  </div>
+
+  <!-- CHAT -->
+  <div class="chat-area">
+    <div class="chat-header">
+      <div class="status-dot"></div>
+      Agent Online
+    </div>
+
+    <div class="messages" id="messages">
+      <div class="welcome">
+        <h2>🎧</h2>
+        <p>Ask me to build a set, find transitions, search by vibe, or discover what's in your library. I know every track you own.</p>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-wrapper">
+        <input type="text" class="chat-input" id="chatInput"
+               placeholder="Build me a set, find a transition, search by vibe..."
+               onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendFromInput();}">
+        <button class="send-btn" id="sendBtn" onclick="sendFromInput()">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API_BASE = window.location.origin;
+  let API_KEY = '';
+  let chatHistory = [];
+  let isLoading = false;
+
+  // ── AUTH ──
+  async function authenticate() {
+    const key = document.getElementById('apiKeyInput').value.trim();
+    const errorEl = document.getElementById('authError');
+
+    if (!key) {
+      errorEl.textContent = 'Please enter a password.';
+      return;
+    }
+
+    try {
+      // Test the key against the stats endpoint first (free, no Claude cost)
+      const res = await fetch(`${API_BASE}/health`);
+      if (res.ok) {
+        API_KEY = key;
+        document.getElementById('authGate').classList.add('hidden');
+        document.getElementById('mainApp').style.display = 'flex';
+        loadStats();
+        document.getElementById('chatInput').focus();
+        setTimeout(() => document.getElementById('authGate').style.display = 'none', 400);
+      }
+    } catch (e) {
+      errorEl.textContent = 'Could not connect to API.';
+    }
+  }
+
+  // Enter key on auth input
+  document.getElementById('apiKeyInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') authenticate();
+  });
+
+  // ── STATS ──
+  async function loadStats() {
+    try {
+      const res = await fetch(`${API_BASE}/stats`);
+      const data = await res.json();
+      document.getElementById('statTracks').textContent = `${data.total_tracks} tracks`;
+      if (data.bpm_range) {
+        document.getElementById('statBpm').textContent =
+          `BPM: ${data.bpm_range.min}–${data.bpm_range.max}`;
+      }
+    } catch (e) {
+      document.getElementById('statBpm').textContent = 'Could not load stats';
+    }
+  }
+
+  // ── CHAT ──
+  function sendFromInput() {
+    const input = document.getElementById('chatInput');
+    const msg = input.value.trim();
+    if (!msg || isLoading) return;
+    input.value = '';
+    sendMessage(msg);
+  }
+
+  async function sendMessage(message) {
+    if (isLoading) return;
+    isLoading = true;
+
+    const messagesEl = document.getElementById('messages');
+    const sendBtn = document.getElementById('sendBtn');
+    const chatInput = document.getElementById('chatInput');
+
+    // Clear welcome message
+    const welcome = messagesEl.querySelector('.welcome');
+    if (welcome) welcome.remove();
+
+    // Add user message
+    addMessage('user', message);
+
+    // Add loading indicator
+    const loadingId = 'loading-' + Date.now();
+    messagesEl.innerHTML += `
+      <div class="msg assistant" id="${loadingId}">
+        <div class="msg-label">DJ Agent</div>
+        <div class="msg-content">
+          <span class="loading-dots">Thinking</span>
+        </div>
+      </div>
+    `;
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+
+    sendBtn.disabled = true;
+    chatInput.disabled = true;
+
+    try {
+      const res = await fetch(`${API_BASE}/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': API_KEY,
+        },
+        body: JSON.stringify({
+          message: message,
+          history: chatHistory,
+        }),
+      });
+
+      if (res.status === 401) {
+        document.getElementById(loadingId).remove();
+        addMessage('assistant', '🔒 Invalid password. Refresh and try again.');
+        return;
+      }
+
+      const data = await res.json();
+
+      // Remove loading
+      document.getElementById(loadingId).remove();
+
+      // Show tool calls if any
+      let toolHtml = '';
+      if (data.tool_calls && data.tool_calls.length > 0) {
+        toolHtml = data.tool_calls.map(tc =>
+          `<div class="tool-call">⚡ ${tc.tool}</div>`
+        ).join('');
+      }
+
+      // Add response
+      addMessage('assistant', data.response, toolHtml);
+
+      // Update history
+      chatHistory.push({ role: 'user', content: message });
+      chatHistory.push({ role: 'assistant', content: data.response });
+
+      // Keep history manageable
+      if (chatHistory.length > 20) {
+        chatHistory = chatHistory.slice(-20);
+      }
+
+    } catch (e) {
+      document.getElementById(loadingId)?.remove();
+      addMessage('assistant', `⚠ Error: ${e.message}. Is the API running?`);
+    } finally {
+      isLoading = false;
+      sendBtn.disabled = false;
+      chatInput.disabled = false;
+      chatInput.focus();
+    }
+  }
+
+  function addMessage(role, content, toolHtml = '') {
+    const messagesEl = document.getElementById('messages');
+    const label = role === 'user' ? 'You' : 'DJ Agent';
+    const formatted = formatResponse(content);
+
+    messagesEl.innerHTML += `
+      <div class="msg ${role}">
+        <div class="msg-label">${label}</div>
+        ${toolHtml}
+        <div class="msg-content">${formatted}</div>
+      </div>
+    `;
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function formatResponse(text) {
+    if (!text) return '';
+
+    // Escape HTML
+    let html = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    // Format code blocks
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, '<pre>$2</pre>');
+
+    // Bold
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+    // Detect setlist-like patterns and render them nicely
+    html = formatSetlistTracks(html);
+
+    // Line breaks
+    html = html.replace(/\n/g, '<br>');
+
+    return html;
+  }
+
+  function formatSetlistTracks(html) {
+    // Match numbered track lines like "1. Artist — Title"
+    const trackPattern = /(\d{1,2})\.\s+(.+?)\s+[—–-]\s+(.+?)(?:<br>|\n|$)/g;
+
+    // Only transform if there are 3+ matches (likely a setlist)
+    const matches = [...html.matchAll(trackPattern)];
+    if (matches.length < 3) return html;
+
+    for (const match of matches) {
+      const num = match[1];
+      const artist = match[2].replace(/<[^>]*>/g, '').trim();
+      const titleLine = match[3].trim();
+
+      // Extract BPM and Key if present
+      const bpmMatch = titleLine.match(/BPM:\s*([\d.]+)/);
+      const keyMatch = titleLine.match(/Key:\s*(\S+)/);
+      const camelotMatch = titleLine.match(/\((\d{1,2}[AB])\)/);
+
+      const title = titleLine.split(/\n|<br>/)[0].replace(/\s*BPM:.*/, '').trim();
+
+      const meta = [
+        bpmMatch ? `BPM ${bpmMatch[1]}` : '',
+        camelotMatch ? camelotMatch[1] : (keyMatch ? keyMatch[1] : ''),
+      ].filter(Boolean).join(' · ');
+
+      const trackHtml = `<div class="setlist-track">
+        <div class="setlist-num">${num}</div>
+        <div class="setlist-info">
+          <div class="setlist-title">${artist} — ${title}</div>
+          ${meta ? `<div class="setlist-meta">${meta}</div>` : ''}
+        </div>
+      </div>`;
+
+      html = html.replace(match[0], trackHtml);
+    }
+
+    // Format transition lines
+    html = html.replace(/[🟢🟡🟠🔴]\s*→\s*([ABCD])\s*transition\s*\((\d+)\/100\)/g, (_, grade, score) => {
+      return `<div class="setlist-transition grade-${grade}">▼ ${grade} transition (${score}/100)</div>`;
+    });
+
+    return html;
+  }
+</script>
+</body>
+</html>
