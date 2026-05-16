@@ -230,26 +230,37 @@ def score_transition(track_a, track_b):
         bpm_b = float(bpm_b)
         diff = abs(bpm_a - bpm_b)
 
-        # Also check half/double time compatibility
+        # Check half/double time compatibility
         half_diff = abs(bpm_a - bpm_b * 2)
         double_diff = abs(bpm_a * 2 - bpm_b)
-        effective_diff = min(diff, half_diff, double_diff)
+
+        # Determine which relationship is closest
+        if half_diff < diff and half_diff < double_diff:
+            effective_diff = half_diff
+            bpm_label = f"half-time {bpm_a}→{bpm_b}"
+        elif double_diff < diff and double_diff < half_diff:
+            effective_diff = double_diff
+            bpm_label = f"double-time {bpm_a}→{bpm_b}"
+        else:
+            effective_diff = diff
+            bpm_label = f"{bpm_a}→{bpm_b}"
 
         if effective_diff <= 1:
             score += 30
-            details.append(f"BPM: locked ({bpm_a}→{bpm_b})")
+            details.append(f"BPM: locked ({bpm_label})")
         elif effective_diff <= 3:
             score += 27
-            details.append(f"BPM: close ({bpm_a}→{bpm_b}, Δ{diff:.1f})")
+            details.append(f"BPM: close ({bpm_label}, Δ{effective_diff:.1f})")
         elif effective_diff <= 6:
             score += 20
-            details.append(f"BPM: workable ({bpm_a}→{bpm_b}, Δ{diff:.1f})")
+            details.append(f"BPM: workable ({bpm_label}, Δ{effective_diff:.1f})")
         elif effective_diff <= 10:
             score += 10
-            details.append(f"BPM: needs pitch adjust ({bpm_a}→{bpm_b}, Δ{diff:.1f})")
+            details.append(f"BPM: stretch ({bpm_label}, Δ{effective_diff:.1f})")
         else:
-            score += 0
-            details.append(f"BPM: big jump ({bpm_a}→{bpm_b}, Δ{diff:.1f})")
+            # Penalize big jumps so they can't rank high on key alone
+            score -= 15
+            details.append(f"BPM: too far ({bpm_label}, Δ{effective_diff:.1f})")
     else:
         score += 10
         details.append("BPM: unknown")
@@ -292,14 +303,32 @@ def score_transition(track_a, track_b):
     }
 
 
-def find_transitions(track, library_tracks, top_n=10):
-    """Find the best tracks to play after the given track."""
+def find_transitions(track, library_tracks, top_n=10, bpm_tolerance=10):
+    """Find the best tracks to play after the given track.
+    
+    Args:
+        track: Source track dict
+        library_tracks: List of all tracks
+        top_n: Number of results to return
+        bpm_tolerance: Max BPM difference allowed (also checks half/double time)
+    """
     scored = []
+    source_bpm = float(track.get('bpm') or 0)
 
     for candidate in library_tracks:
         # Don't match against itself
         if candidate.get('filepath') == track.get('filepath'):
             continue
+
+        # Pre-filter by BPM range (including half/double time)
+        cand_bpm = float(candidate.get('bpm') or 0)
+        if source_bpm and cand_bpm:
+            diff = abs(source_bpm - cand_bpm)
+            half_diff = abs(source_bpm - cand_bpm * 2)
+            double_diff = abs(source_bpm * 2 - cand_bpm)
+            closest = min(diff, half_diff, double_diff)
+            if closest > bpm_tolerance:
+                continue
 
         result = score_transition(track, candidate)
         result['track'] = candidate
