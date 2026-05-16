@@ -377,9 +377,11 @@ Mixing rules — follow these strictly:
 - ONLY recommend transitions with Camelot-compatible keys (same code, ±1, or A/B switch). 
   Never suggest a key clash and then try to explain how to "mask" it.
 - Keep BPM transitions within ±6 BPM of each other. Larger jumps need a clear reason.
-- Half-time/double-time means tracks tagged at different BPMs that rhythmically align 
-  (e.g., 85 BPM hip hop with 170 BPM drum & bass). It does NOT mean slowing a track to 
-  half its tempo on the decks — never suggest that.
+- Half-time/double-time means the BPM ratio is exactly 2:1 (within ±3 BPM tolerance).
+  Examples: 120→60 is half-time. 85→170 is double-time. 124→90 is NOT half-time — 
+  that's just a 34 BPM drop. Only call something half-time or double-time if the math 
+  actually works out to a 2:1 ratio. If the user asks for a half-time transition, find 
+  tracks where one is roughly double the BPM of the other.
 - Don't suggest unrealistic DJ techniques like dramatically changing a track's playback speed.
   Pitch adjustments should stay within ±3-4% (about ±3-4 BPM on a 120 BPM track).
 - If a transition scores below 70, flag it as risky rather than inventing ways to make it work.
