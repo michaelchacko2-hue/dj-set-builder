@@ -104,6 +104,21 @@ TOOLS = [
         },
     },
     {
+        "name": "find_halftime_doubletime",
+        "description": "Find tracks at half-time or double-time BPM of a given tempo. Use when the user asks for a half-time or double-time transition. Does the simple math: halves or doubles the BPM and finds all tracks near that target. Returns results ranked by transition quality.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "bpm": {"type": "number", "description": "The current track's BPM"},
+                "direction": {"type": "string", "enum": ["half", "double", "both"], "description": "half = find tracks at half the BPM, double = find tracks at double the BPM, both = find both", "default": "both"},
+                "camelot_code": {"type": "string", "description": "Optional: current Camelot code to also filter by key compatibility"},
+                "tolerance": {"type": "number", "description": "BPM tolerance (default 3)", "default": 3},
+                "top_n": {"type": "integer", "description": "Number of results (default 10)", "default": 10},
+            },
+            "required": ["bpm"],
+        },
+    },
+    {
         "name": "build_setlist",
         "description": "Build an ordered setlist from the library. Finds tracks matching the vibe, then orders them for smooth BPM and key flow. Use when the user asks to build a set or playlist.",
         "input_schema": {
@@ -314,6 +329,70 @@ def run_preview_track(artist, title):
     return f"Preview on YouTube: https://www.youtube.com/results?search_query={query}"
 
 
+def run_find_halftime_doubletime(bpm, direction="both", camelot_code=None, tolerance=3, top_n=10):
+    """Simple math: find all tracks at half or double the given BPM."""
+    targets = []
+    if direction in ("half", "both"):
+        targets.append(("half-time", bpm / 2))
+    if direction in ("double", "both"):
+        targets.append(("double-time", bpm * 2))
+
+    results = []
+    for label, target_bpm in targets:
+        for track in LIBRARY_TRACKS:
+            track_bpm = track.get('bpm')
+            if not track_bpm:
+                continue
+            track_bpm = float(track_bpm)
+
+            if abs(track_bpm - target_bpm) <= tolerance:
+                t_camelot = key_to_camelot(track.get('key', '')) or '?'
+
+                # Check key compatibility if specified
+                key_note = ""
+                if camelot_code:
+                    code = camelot_code.upper().strip()
+                    from camelot import get_compatible_codes
+                    compatible = [c[0] for c in get_compatible_codes(code)]
+                    if t_camelot in compatible:
+                        key_note = " ✓ key compatible"
+                    else:
+                        key_note = " ✗ key clash"
+
+                af = track.get('audio_features', {})
+                results.append({
+                    'label': label,
+                    'target_bpm': target_bpm,
+                    'artist': track.get('artist', 'Unknown'),
+                    'title': track.get('title', '?'),
+                    'bpm': track_bpm,
+                    'camelot': t_camelot,
+                    'key': track.get('key', '?'),
+                    'energy': af.get('energy_label', '?') if af and '_error' not in af else '?',
+                    'key_note': key_note,
+                })
+
+    if not results:
+        half_bpm = bpm / 2
+        double_bpm = bpm * 2
+        return (f"No tracks found at half-time (~{half_bpm:.0f} BPM) or "
+                f"double-time (~{double_bpm:.0f} BPM) within ±{tolerance} BPM tolerance. "
+                f"Your library may not have tracks in those BPM ranges.")
+
+    # Sort by closeness to target
+    results.sort(key=lambda r: abs(r['bpm'] - r['target_bpm']))
+
+    output = [f"Found {len(results)} tracks at half/double-time of {bpm} BPM:\n"]
+    for r in results[:top_n]:
+        output.append(
+            f"• [{r['label']}] {r['artist']} — {r['title']} "
+            f"[BPM: {r['bpm']}, Key: {r['key']} ({r['camelot']}), "
+            f"Energy: {r['energy']}]{r['key_note']}"
+        )
+
+    return "\n".join(output)
+
+
 def run_library_stats():
     total = len(LIBRARY_TRACKS)
     bpms = [float(t['bpm']) for t in LIBRARY_TRACKS if t.get('bpm')]
@@ -354,6 +433,7 @@ TOOL_RUNNERS = {
     "get_track_info": lambda args: run_get_track_info(args["track_name"]),
     "build_setlist": lambda args: run_build_setlist(args["description"], args.get("num_tracks", 8), args.get("starting_bpm")),
     "preview_track": lambda args: run_preview_track(args["artist"], args["title"]),
+    "find_halftime_doubletime": lambda args: run_find_halftime_doubletime(args["bpm"], args.get("direction", "both"), args.get("camelot_code"), args.get("tolerance", 3), args.get("top_n", 10)),
     "library_stats": lambda args: run_library_stats(),
 }
 
@@ -390,11 +470,13 @@ When building setlists, think about the energy arc — most good sets build grad
 have peaks, and maybe a cool-down. Don't just dump tracks randomly."""
 
 
-def run_agent_turn(client, messages, verbose=False):
+def run_agent_turn(client, messages, verbose=False, max_tool_rounds=5):
     """
     Run one turn of the agent loop.
     Claude may call tools multiple times before giving a final text response.
+    Capped at max_tool_rounds to prevent runaway loops.
     """
+    tool_round = 0
 
     while True:
         response = client.messages.create(
@@ -406,6 +488,13 @@ def run_agent_turn(client, messages, verbose=False):
         )
 
         if response.stop_reason == "tool_use":
+            tool_round += 1
+            if tool_round > max_tool_rounds:
+                # Force a final response
+                messages.append({"role": "assistant", "content": response.content})
+                messages.append({"role": "user", "content": [{"type": "tool_result", "tool_use_id": response.content[-1].id, "content": "Tool limit reached. Give your best answer with what you have so far."}]})
+                continue
+
             # Claude wants to call tools — add its response and process calls
             messages.append({"role": "assistant", "content": response.content})
 
