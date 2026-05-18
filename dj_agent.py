@@ -467,10 +467,17 @@ Mixing rules — follow these strictly:
 - If a transition scores below 70, flag it as risky rather than inventing ways to make it work.
 
 When building setlists, think about the energy arc — most good sets build gradually, 
-have peaks, and maybe a cool-down. Don't just dump tracks randomly."""
+have peaks, and maybe a cool-down. Don't just dump tracks randomly.
+
+Efficiency rules — you have a maximum of 3 tool calls per response:
+- Call build_setlist for setlist requests. It handles search + ordering in one call.
+- Call find_halftime_doubletime for half/double-time requests. It does the BPM math directly.
+- Never retry the same tool with different wording hoping for better results.
+- If the library doesn't have what's needed, say so after one search — don't keep looking.
+- Prefer one precise tool call over multiple exploratory ones."""
 
 
-def run_agent_turn(client, messages, verbose=False, max_tool_rounds=5):
+def run_agent_turn(client, messages, verbose=False, max_tool_rounds=3):
     """
     Run one turn of the agent loop.
     Claude may call tools multiple times before giving a final text response.
@@ -480,7 +487,7 @@ def run_agent_turn(client, messages, verbose=False, max_tool_rounds=5):
 
     while True:
         response = client.messages.create(
-            model="claude-sonnet-4-6",
+            model="claude-haiku-4-5",
             max_tokens=4096,
             system=SYSTEM_PROMPT,
             tools=TOOLS,

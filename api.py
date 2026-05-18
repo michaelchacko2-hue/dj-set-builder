@@ -177,12 +177,13 @@ def track_to_result(track) -> TrackResult:
 from dj_agent import TOOLS, TOOL_RUNNERS, SYSTEM_PROMPT
 
 def run_agent_turn(client, messages):
-    """Run one agent turn with tool calling loop."""
+    """Run one agent turn with tool calling loop. Capped at 5 tool rounds."""
     tool_calls_log = []
+    tool_round = 0
 
     while True:
         response = client.messages.create(
-            model="claude-sonnet-4-6",
+            model="claude-haiku-4-5",
             max_tokens=4096,
             system=SYSTEM_PROMPT,
             tools=TOOLS,
@@ -190,6 +191,12 @@ def run_agent_turn(client, messages):
         )
 
         if response.stop_reason == "tool_use":
+            tool_round += 1
+            if tool_round > 3:
+                messages.append({"role": "assistant", "content": response.content})
+                messages.append({"role": "user", "content": [{"type": "tool_result", "tool_use_id": response.content[-1].id, "content": "Tool limit reached. Give your best answer with what you have so far."}]})
+                continue
+
             messages.append({"role": "assistant", "content": response.content})
 
             tool_results = []
