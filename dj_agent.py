@@ -474,7 +474,14 @@ Efficiency rules — you have a maximum of 3 tool calls per response:
 - Call find_halftime_doubletime for half/double-time requests. It does the BPM math directly.
 - Never retry the same tool with different wording hoping for better results.
 - If the library doesn't have what's needed, say so after one search — don't keep looking.
-- Prefer one precise tool call over multiple exploratory ones."""
+- Prefer one precise tool call over multiple exploratory ones.
+
+Output format rules:
+- For setlists, use a compact numbered table with columns: #, Artist — Title, BPM, Key, Camelot, Energy
+- Keep transition notes short: one line per transition, not a paragraph
+- Don't write long narrative breakdowns of each section. A brief 1-2 sentence summary at the end is fine.
+- Never use headers like "Opening Section" or "Peak Section" — just list the tracks in order
+- Let the data speak for itself"""
 
 
 def run_agent_turn(client, messages, verbose=False, max_tool_rounds=3):
