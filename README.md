@@ -3,7 +3,7 @@
 An AI-powered DJ assistant that searches your music library by vibe, finds harmonically compatible transitions using Camelot wheel logic, and builds complete setlists — powered by Claude, ChromaDB, and Librosa audio analysis.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue)
-![Claude](https://img.shields.io/badge/AI-Claude%20Sonnet%204.6-blueviolet)
+![Claude](https://img.shields.io/badge/AI-Claude%20Haiku%204.5-blueviolet)
 ![ChromaDB](https://img.shields.io/badge/Vector%20DB-ChromaDB-orange)
 ![FastAPI](https://img.shields.io/badge/API-FastAPI-green)
 
@@ -17,26 +17,44 @@ An AI-powered DJ assistant that searches your music library by vibe, finds harmo
 ## Architecture
 
 ```
-You ──→ Chat UI ──→ FastAPI ──→ Claude (Sonnet 4.6)
+You ──→ Chat UI ──→ FastAPI ──→ Claude (Haiku 4.5, tool use)
                                    │
-                          ┌────────┴────────┐
-                          ▼                  ▼
-                    search_library     find_transitions
-                          │                  │
-                    ChromaDB             Camelot Module
-                    (vector search)      (key + BPM + energy)
-                          │                  │
-                          └────────┬─────────┘
+                    ┌──────────────┼──────────────┐
+                    ▼              ▼              ▼
+              search_library  find_*_transitions  build_setlist
+                    │         find_halftime_      get_track_info
+                    │         doubletime          library_stats
+                    │              │              preview_track
+                    ▼              ▼              │
+                ChromaDB      Camelot Module      │
+             (vector search) (key + BPM + energy) │
+                    │              │              │
+                    └──────────────┼──────────────┘
                                    ▼
                              library.json
                         (ID3 tags + Librosa features)
 ```
 
+## Agent Tools
+
+Claude decides which of these tools to call and chains them to answer a request:
+
+| Tool | What it does |
+|------|--------------|
+| `search_library` | Vibe search in natural language ("dark driving techno around 126 BPM") |
+| `find_compatible_transitions` | Best tracks to play after a given track (key, BPM, energy) |
+| `find_transitions_by_key_bpm` | Compatible tracks for a specific Camelot code and BPM |
+| `find_halftime_doubletime` | Tracks at half or double the current tempo, ranked by transition quality |
+| `build_setlist` | Ordered setlist for a vibe, with smooth BPM and key flow |
+| `get_track_info` | BPM, key, Camelot code, energy, brightness, percussiveness for a track |
+| `library_stats` | Track count, BPM range, top genres and keys, energy breakdown |
+| `preview_track` | YouTube search link to preview a track |
+
 ## Tech Stack
 
 | Component | Technology | Purpose |
 |-----------|-----------|---------|
-| AI Agent | Claude Sonnet 4.6 (Anthropic SDK) | Natural language reasoning + tool orchestration |
+| AI Agent | Claude Haiku 4.5 (Anthropic SDK tool use) | Natural language reasoning + tool orchestration |
 | Vector Database | ChromaDB | Semantic search over track descriptions |
 | Audio Analysis | Librosa | Energy, brightness, percussiveness extraction |
 | Metadata | Mutagen | ID3 tag reading (BPM, key, genre) |
@@ -60,13 +78,13 @@ You ──→ Chat UI ──→ FastAPI ──→ Claude (Sonnet 4.6)
 - **Energy flow** (30 pts): Smooth, building, or dropping
 
 ### 4. AI Agent
-`dj_agent.py` exposes the above as tools that Claude can call. Claude reads tool descriptions, decides which to use, chains multiple calls, and synthesizes results into a coherent response.
+`dj_agent.py` exposes the above as eight tools that Claude can call (see [Agent Tools](#agent-tools)). Claude reads tool descriptions, decides which to use, chains multiple calls, and synthesizes results into a coherent response.
 
 ## Run Locally
 
 ```bash
 # Clone and install
-git clone https://github.com/YOUR_USERNAME/dj-set-builder.git
+git clone https://github.com/michaelchacko2-hue/dj-set-builder.git
 cd dj-set-builder
 pip install -r requirements.txt
 
@@ -107,8 +125,7 @@ docker compose up --build
 ## Cost
 
 - ChromaDB, Librosa, FastAPI: **Free** (runs locally)
-- Claude API: **~$0.01–0.05 per chat message** (Sonnet 4.6)
-- Typical monthly usage: **$2–5**
+- Claude API: **pay-per-use**; the agent runs on Claude Haiku 4.5 to keep per-message cost low
 
 ## License
 
